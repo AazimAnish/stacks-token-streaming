@@ -231,4 +231,4 @@ describe("test token streaming contract", () => {
       })
     );
   });
-});g
+});

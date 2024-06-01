@@ -6,12 +6,13 @@
 
 ;; data vars
 (define-data-var latest-stream-id uint u0)
+(define-data-var nonce uint u0)
 
 ;; streams mapping
 (define-map streams
   uint ;; stream-id
   {
-    sender: principal, 
+    sender: principal,
     recipient: principal,
     balance: uint,
     withdrawn-balance: uint,
@@ -19,6 +20,7 @@
     timeframe: (tuple (start-block uint) (stop-block uint))
   }
 )
+
 
 ;; Create a new stream
 (define-public (stream-to
@@ -51,6 +53,7 @@
   )
 )
 
+
 ;; Increase the locked STX balance for a stream
 (define-public (refuel
     (stream-id uint)
@@ -68,6 +71,25 @@
   )
 )
 
+;; Check balance for a party involved in a stream
+(define-read-only (balance-of
+    (stream-id uint)
+    (who principal)
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) u0))
+    (block-delta (calculate-block-delta (get timeframe stream)))
+    (recipient-balance (* block-delta (get payment-per-block stream)))
+  )
+    (if (is-eq who (get recipient stream))
+      (- recipient-balance (get withdrawn-balance stream))
+      (if (is-eq who (get sender stream))
+        (- (get balance stream) recipient-balance)
+        u0
+      )
+    )
+  )
+)
 
 ;; Calculate the number of blocks a stream has been active
 (define-read-only (calculate-block-delta
@@ -92,26 +114,6 @@
     )
   )
     delta
-  )
-)
-
-;; Check balance for a party involved in a stream
-(define-read-only (balance-of
-    (stream-id uint)
-    (who principal)
-  )
-  (let (
-    (stream (unwrap! (map-get? streams stream-id) u0))
-    (block-delta (calculate-block-delta (get timeframe stream)))
-    (recipient-balance (* block-delta (get payment-per-block stream)))
-  )
-    (if (is-eq who (get recipient stream))
-      (- recipient-balance (get withdrawn-balance stream))
-      (if (is-eq who (get sender stream))
-        (- (get balance stream) recipient-balance)
-        u0
-      )
-    )
   )
 )
 
